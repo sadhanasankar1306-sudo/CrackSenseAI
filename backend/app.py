@@ -1,51 +1,57 @@
 import sys
 from pathlib import Path
 
-# Ensure backend directory is in sys.path for robust imports
+# Ensure backend directory is in sys.path
 BACKEND_DIR = Path(__file__).resolve().parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-try:
-    from flask import Flask
-    from flask_cors import CORS
-    from config import Config
-    from routes.api import api_bp
+from flask import Flask, jsonify
+from flask_cors import CORS
 
-    def create_app(config_class=Config):
-        app = Flask(__name__)
-        app.config.from_object(config_class)
-        
-        CORS(app)
-        app.register_blueprint(api_bp, url_prefix='/api')
-        
-        @app.route('/')
-        @app.route('/api')
-        @app.route('/api/')
-        def root():
-            return {
-                "name": "CrackSense AI Engine",
-                "status": "Operational",
-                "docs": "/api/health"
-            }
+def create_app(config_class=None):
+    application = Flask(__name__)
+    CORS(application)
+    
+    if config_class:
+        application.config.from_object(config_class)
+    else:
+        try:
+            from config import Config
+            application.config.from_object(Config)
+        except Exception:
+            pass
             
-        return app
+    # Register API blueprint
+    try:
+        from routes.api import api_bp
+        application.register_blueprint(api_bp, url_prefix='/api')
+    except Exception as err:
+        print(f"[Warning] Failed to register api_bp: {err}")
+        
+    @application.route('/')
+    @application.route('/api')
+    @application.route('/api/')
+    def index():
+        return {
+            "name": "CrackSense AI Engine",
+            "status": "Operational",
+            "service": "Flask Research Backend",
+            "docs": "/api/health"
+        }
+        
+    @application.route('/health')
+    def direct_health():
+        return jsonify({
+            "status": "healthy",
+            "service": "CrackSense AI Engine",
+            "version": "2.1.0"
+        })
+        
+    return application
 
-    # Top-level "app" Flask instance required by Vercel and WSGI servers
-    app = create_app()
-
-except ImportError:
-    # Graceful WSGI fallback when dependencies are installing
-    def create_app(config_class=None):
-        def wsgi_app(environ, start_response):
-            status = '200 OK'
-            headers = [('Content-Type', 'application/json')]
-            start_response(status, headers)
-            return [b'{"status":"operational","service":"CrackSense AI"}']
-        return wsgi_app
-
-    app = create_app()
+# Top-level "app" Flask instance required by Vercel and WSGI
+app = create_app()
 
 if __name__ == '__main__':
-    if hasattr(app, 'run'):
-        app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
