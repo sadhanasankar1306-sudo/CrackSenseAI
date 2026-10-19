@@ -22,6 +22,32 @@ async function startServer() {
   let structures: Structure[] = [...INITIAL_STRUCTURES];
   let inspections: InspectionRecord[] = [...INITIAL_INSPECTIONS];
 
+  // If deployed in a multi-service setup with BACKEND_URL bound
+  const BACKEND_URL = process.env.BACKEND_URL;
+  if (BACKEND_URL) {
+    app.use('/api', async (req, res, next) => {
+      // Forward FEA and detection calculations to Flask backend service
+      if (req.path.startsWith('/fea') || req.path.startsWith('/detect') || req.path.startsWith('/progression')) {
+        try {
+          const targetUrl = new URL(`/api${req.url}`, BACKEND_URL);
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          const response = await fetch(targetUrl.toString(), {
+            method: req.method,
+            headers,
+            body: ['POST', 'PUT', 'PATCH'].includes(req.method) ? JSON.stringify(req.body) : undefined,
+          });
+          const data = await response.json();
+          return res.status(response.status).json(data);
+        } catch (err) {
+          // If backend service is not reachable, fall back to in-memory Node engine
+          next();
+        }
+      } else {
+        next();
+      }
+    });
+  }
+
   // API Routes
   app.get('/api/health', (req, res) => {
     res.json({

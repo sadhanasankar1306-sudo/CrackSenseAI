@@ -20,6 +20,8 @@ try:
         app.register_blueprint(api_bp, url_prefix='/api')
         
         @app.route('/')
+        @app.route('/api')
+        @app.route('/api/')
         def root():
             return {
                 "name": "CrackSense AI Engine",
