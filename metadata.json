@@ -1,0 +1,6 @@
+{
+  "name": "CrackSense AI — Structural Health & FEA",
+  "description": "AI-driven framework for concrete crack segmentation, temporal progression monitoring, and finite element structural assessment.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
